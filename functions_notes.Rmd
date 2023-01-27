@@ -1,0 +1,209 @@
+---
+title: "Functions"
+author: "Chiamaka Azodo"
+date: "2/20/2022"
+output: html_document
+  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+***
+
+Source for these notes can be found in the Advanced R [Functions](https://adv-r.hadley.nz/functions.html) chapter.
+
+
+### Function fundamentals
+
+To understand functions in R you need to internalise two important ideas:
+- Functions can be broken down into three components: arguments, body, and environment.
+- Functions are objects, just as vectors are objects.
+
+
+A function has three parts:
+- The `formals()`, the list of arguments that control how you call the function.
+- The `body()`, the code inside the function.
+- The `environment()`, the data structure that determines how the function finds the values associated with the names.
+
+```{r}
+f02 <- function(x, y) {
+  # A comment
+  x + y
+}
+
+formals(f02)
+#> $x
+#> 
+#> 
+#> $y
+
+body(f02)
+#> {
+#>     x + y
+#> }
+
+environment(f02)
+#> <environment: R_GlobalEnv>
+```
+
+
+`srcref` points to the source code used to create a function.
+```{r}
+attr(f02, "srcref")
+#> function(x, y) {
+#>   # A comment
+#>   x + y
+#> }
+```
+
+
+It’s very important to understand that R functions are objects in their own right, a language property often called “first-class functions”. Unlike in many other languages, there is no special syntax for defining and naming a function: you simply create a function object (with function) and bind it to a name with <-:
+
+```{r}
+f01 <- function(x) {
+  sin(1 / x ^ 2)
+}
+```
+
+
+If you choose not to give a function a name, you get an anonymous function. This is useful when it’s not worth the effort to figure out a name:
+
+```{r}
+lapply(mtcars, function(x) length(unique(x)))
+Filter(function(x) !is.numeric(x), mtcars)
+integrate(function(x) sin(x) ^ 2, 0, pi)
+```
+
+
+A final option is to put functions in a list:
+
+```{r}
+funs <- list(
+  half = function(x) x / 2,
+  double = function(x) x * 2
+)
+
+funs$double(10)
+#> [1] 20
+```
+
+
+### Function composition
+
+Base R provides two ways to compose multiple function calls. For example, imagine you want to compute the population standard deviation using sqrt() and mean() as building blocks:
+
+
+The `magrittr` package35 provides a third option: the binary operator %>%, which is called the pipe and is pronounced as “and then”.
+
+```{r}
+library(magrittr)
+
+#x %>%
+  #deviation() %>%
+  #square() %>%
+  #mean() %>%
+  #sqrt()
+#> [1] 0.274
+```
+
+x %>% f() is equivalent to f(x); x %>% f(y) is equivalent to f(x, y).
+
+
+### Lexical Scoping
+
+R uses lexical scoping: it looks up the values of names based on how a function is defined, not how it is called. “Lexical” here is not the English adjective that means relating to words or a vocabulary. It’s a technical CS term that tells us that the scoping rules use a parse-time, rather than a run-time structure.
+
+R’s lexical scoping follows four primary rules:
+
+#### Name masking
+  - The basic principle of lexical scoping is that names defined inside a function mask names defined outside a function.
+  - If a name isn’t defined inside a function, R looks one level up.
+  - The same rules apply if a function is defined inside another function. First, R looks inside the current function. Then, it looks where that function was defined (and so on, all the way up to the global environment). Finally, it looks in other loaded packages.
+  
+```{r}
+x <- 1
+g04 <- function() {
+  y <- 2
+  i <- function() {
+    z <- 3
+    c(x, y, z)
+  }
+  i()
+}
+g04()
+```
+
+
+#### Functions versus variables
+
+However, when a function and a non-function share the same name (they must, of course, reside in different environments), applying these rules gets a little more complicated. When you use a name in a function call, R ignores non-function objects when looking for that value. For example, in the code below, g09 takes on two different values:
+  
+  
+```{r}
+g09 <- function(x) x + 100
+g10 <- function() {
+  g09 <- 10
+  g09(g09)
+}
+g10()
+#> [1] 110
+```
+  
+#### A fresh start
+
+What happens to values between invocations of a function? Consider the example below. What will happen the first time you run this function? What will happen the second time?39 (If you haven’t seen exists() before, it returns TRUE if there’s a variable with that name and returns FALSE if not.)
+
+```{r}
+g11 <- function() {
+  if (!exists("a")) {
+    a <- 1
+  } else {
+    a <- a + 1
+  }
+  a
+}
+
+g11()
+g11()
+```
+
+You might be surprised that g11() always returns the same value. This happens because every time a function is called a new environment is created to host its execution. This means that a function has no way to tell what happened the last time it was run; each invocation is completely independent. 
+
+#### Dynamic lookup
+
+Lexical scoping determines where, but not when to look for values. R looks for values when the function is run, not when the function is created. Together, these two properties tell us that the output of a function can differ depending on the objects outside the function’s environment:
+
+```{r}
+g12 <- function() x + 1
+x <- 15
+g12()
+#> [1] 16
+
+x <- 20
+g12()
+#> [1] 21
+```
+
+This behaviour can be quite annoying. If you make a spelling mistake in your code, you won’t get an error message when you create the function. And depending on the variables defined in the global environment, you might not even get an error message when you run the function.
+
+To solve this problem, you can manually change the function’s environment to the emptyenv(), an environment which contains nothing:
+
+```{r}
+environment(g12) <- emptyenv()
+g12()
+#> Error in x + 1: could not find function "+"
+```
+
+
+### Lazy evaluation
+left, right, center
+
+
+
+
+
+
+
+
+
